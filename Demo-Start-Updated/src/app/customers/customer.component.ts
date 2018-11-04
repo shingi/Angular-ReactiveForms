@@ -1,6 +1,8 @@
 import { Component, OnInit } from '@angular/core';
 import { FormGroup, FormBuilder, Validators, AbstractControl, ValidatorFn } from '@angular/forms';
 
+import 'rxjs/add/operator/debounceTime';
+
 import { Customer } from './customer';
 
 // factory validator function
@@ -36,6 +38,12 @@ export class CustomerComponent implements OnInit {
   customerForm: FormGroup;
   // this is the data model
   customer = new Customer();
+  emailMessage: string;
+
+  private validationMessages = {
+    required: 'Please enter your email address.',
+    email: 'Please enter a valid email address.'
+  };
 
   constructor(private fb: FormBuilder) { }
 
@@ -53,6 +61,20 @@ export class CustomerComponent implements OnInit {
       rating: ['', ratingRange(1, 5)],
       sendCatalog: true
     });
+
+    this.customerForm.get('notification').valueChanges
+      .subscribe(value => this.setNotification(value));
+
+    const emailControl = this.customerForm.get('emailGroup.email');
+    emailControl.valueChanges.debounceTime(1000).subscribe(value => this.setMessage(emailControl));
+  }
+
+  setMessage(c: AbstractControl): void {
+    this.emailMessage = '';
+    if ((c.touched || c.dirty) && c.errors) {
+      this.emailMessage = Object.keys(c.errors)
+        .map(key => this.validationMessages[key]).join(' ');
+    }
   }
 
   save() {
@@ -74,7 +96,6 @@ export class CustomerComponent implements OnInit {
   }
 
   setNotification(notifyVia: string): void {
-    // console.log(notifyVia);
     const phoneControl = this.customerForm.get('phone');
     if (notifyVia === 'text') {
       phoneControl.setValidators(Validators.required);
